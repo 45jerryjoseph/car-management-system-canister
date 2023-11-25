@@ -1,3 +1,4 @@
+// Import Necessary libraries and modules 
 #[macro_use]
 extern crate serde;
 use candid::{Decode, Encode};
@@ -7,10 +8,11 @@ use ic_stable_structures::{BoundedStorable, Cell, DefaultMemoryImpl, StableBTree
 use std::{borrow::Cow, cell::RefCell};
 use std::borrow::{Borrow, BorrowMut};
 
-
+// Define aliases for types used in the code
 type Memory = VirtualMemory<DefaultMemoryImpl>;
 type IdCell = Cell<u64, Memory>;
 
+// Define the Car Struct with various fields
 #[derive(candid::CandidType, Clone, Serialize, Deserialize, Default)]
 struct Car {
     id: u64,
@@ -24,6 +26,7 @@ struct Car {
     is_booked: bool, // New field for booking status
 }
 
+// Implement methods to convert Car instances to/from bytes and define size
 impl Storable for Car {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         Cow::Owned(Encode!(self).unwrap())
@@ -39,6 +42,8 @@ impl BoundedStorable for Car {
     const IS_FIXED_SIZE: bool = false;
 }
 
+
+// Define a thread-local memory manager and other thread-local variables 
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(
         MemoryManager::init(DefaultMemoryImpl::default())
@@ -55,6 +60,7 @@ thread_local! {
         ));
 }
 
+// Define a struct to hold car data recieved for adding/updating
 #[derive(candid::CandidType, Serialize, Deserialize, Default)]
 struct CarPayload {
     make: String,
@@ -65,6 +71,7 @@ struct CarPayload {
     is_booked: bool, // Add is_booked field to payload
 }
 
+// Define customer Struct
 #[derive(candid::CandidType, Serialize, Deserialize, Default, Clone)]
 struct Customer {
     id: u64,
@@ -72,6 +79,7 @@ struct Customer {
     contact: String,
 }
 
+// Implement method to convert Customer to/from bytes
 impl Storable for Customer {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         Cow::Owned(Encode!(self).unwrap())
@@ -87,6 +95,7 @@ impl BoundedStorable for Customer {
     const IS_FIXED_SIZE: bool = false;
 }
 
+// Define a Reseravtion Struct 
 #[derive(candid::CandidType, Serialize, Deserialize, Default, Clone)]
 struct Reservation {
     car_id: u64,
@@ -94,6 +103,7 @@ struct Reservation {
     reservation_time: u64,
 }
 
+// Implement method to convert Reservation to/from bytes
 impl Storable for Reservation {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         Cow::Owned(Encode!(self).unwrap())
@@ -108,6 +118,8 @@ impl BoundedStorable for Reservation {
     const MAX_SIZE: u32 = 1024;
     const IS_FIXED_SIZE: bool = false;
 }
+
+// Define Queries and updates related to Car Management
 
 #[ic_cdk::query]
 fn get_car(id: u64) -> Result<Car, Error> {
@@ -192,6 +204,8 @@ fn delete_car(id: u64) -> Result<Car, Error> {
     }
 }
 
+// Functions to manage Customer data (add,get delete)
+
 #[ic_cdk::update]
 fn add_customer(name: String, contact: String) -> Option<Customer> {
     let id = ID_COUNTER
@@ -251,6 +265,8 @@ fn delete_customer(id: u64) -> Result<Customer, Error> {
         }),
     }
 }
+
+// Functions to handle Reservations (make,get,cancel)
 
 #[ic_cdk::update]
 fn make_reservation(car_id: u64, customer_id: u64) -> Result<Reservation, Error> {
@@ -315,6 +331,8 @@ fn cancel_reservation(car_id: u64) -> Result<(), Error> {
     }
 }
 
+
+// Function to generate a report containing all Stored cars
 #[ic_cdk::query]
 fn generate_report() -> Vec<Car> {
     // Assuming MemoryId::new(1) is reserved for car storage
@@ -326,12 +344,12 @@ fn generate_report() -> Vec<Car> {
         .collect()
 }
 
-
+// Define an Error enum to handle 'not found' scenarios
 #[derive(candid::CandidType, Deserialize, Serialize)]
 enum Error {
     NotFound { msg: String },
 }
-
+// helper function to  get car by id 
 fn _get_car(id: &u64) -> Option<Car> {
     // Assuming MemoryId::new(1) is reserved for car storage
     let car_storage = MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1)));
@@ -339,5 +357,5 @@ fn _get_car(id: &u64) -> Option<Car> {
         .borrow()
         .get(id)
 }
-
+// Export candid Interface for this code 
 ic_cdk::export_candid!();
